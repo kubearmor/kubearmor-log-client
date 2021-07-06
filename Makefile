@@ -12,9 +12,7 @@ run: $(CURDIR)/kubearmor-log-client
 
 .PHONY: build-image
 build-image:
-	cd $(CURDIR); cp -r ../protobuf .
 	cd $(CURDIR); docker build -t kubearmor/kubearmor-log-client:latest .
-	cd $(CURDIR); rm -rf protobuf
 
 .PHONY: push-image
 push-image:
