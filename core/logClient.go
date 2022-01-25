@@ -217,6 +217,11 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 			if len(res.Action) > 0 {
 				str = str + fmt.Sprintf("Action: %s\n", res.Action)
 			}
+			str = str + fmt.Sprintf("ProcessName: %s\n", res.ProcessName)
+
+			str = str + fmt.Sprintf("ProcessPath: %s\n", res.ProcessPath)
+			str = str + fmt.Sprintf("ParentProcessName: %s\n", res.ParentProcessName)
+			str = str + fmt.Sprintf("ParentProcessPath: %s\n", res.ParentProcessPath)
 
 			str = str + fmt.Sprintf("Result: %s\n", res.Result)
 		}
