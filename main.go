@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kubearmor/kubearmor-log-client/core"
+	"github.com/kubearmor/kubearmor-log-client/client"
 )
 
 // StopChan Channel
@@ -86,7 +86,7 @@ func main() {
 	// == //
 
 	// create a client
-	logClient := core.NewClient(gRPC, *msgPathPtr, *logPathPtr, *logFilterPtr)
+	logClient := client.NewClient(gRPC, *msgPathPtr, *logPathPtr, *logFilterPtr)
 	if logClient == nil {
 		fmt.Printf("Failed to connect to the gRPC server (%s)\n", gRPC)
 		return

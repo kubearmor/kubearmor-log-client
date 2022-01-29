@@ -7,8 +7,8 @@ RUN apk add build-base
 
 WORKDIR /usr/src/kubearmor-log-client
 
+COPY ./client ./client
 COPY ./common ./common
-COPY ./core ./core
 COPY ./go.mod ./go.mod
 COPY ./main.go ./main.go
 
