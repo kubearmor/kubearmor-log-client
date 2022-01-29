@@ -142,7 +142,7 @@ func NewClient(server, msgPath, logPath, logFilter string) *Feeder {
 
 // DoHealthCheck Function
 func (fd *Feeder) DoHealthCheck() bool {
-	// generate a nonce
+	// #nosec
 	randNum := rand.Int31()
 
 	// send a nonce
