@@ -62,10 +62,10 @@ func NewClient(server, msgPath, logPath, logFilter string) *LogClient {
 
 	lc.client = pb.NewLogServiceClient(lc.conn)
 
-	if msgPath != "none" {
-		msgIn := pb.RequestMessage{}
-		msgIn.Filter = ""
+	msgIn := pb.RequestMessage{}
+	msgIn.Filter = ""
 
+	if msgPath != "none" {
 		msgStream, err := lc.client.WatchMessages(context.Background(), &msgIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchMessages() (%s)\n", err.Error())
@@ -74,20 +74,22 @@ func NewClient(server, msgPath, logPath, logFilter string) *LogClient {
 		lc.msgStream = msgStream
 	}
 
-	if logPath != "none" {
-		alertIn := pb.RequestMessage{}
-		alertIn.Filter = ""
+	alertIn := pb.RequestMessage{}
+	alertIn.Filter = logFilter
 
+	if logPath != "none" && (alertIn.Filter == "all" || alertIn.Filter == "policy") {
 		alertStream, err := lc.client.WatchAlerts(context.Background(), &alertIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchAlerts() (%s)\n", err.Error())
 			return nil
 		}
 		lc.alertStream = alertStream
+	}
 
-		logIn := pb.RequestMessage{}
-		logIn.Filter = ""
+	logIn := pb.RequestMessage{}
+	logIn.Filter = logFilter
 
+	if logPath != "none" && (logIn.Filter == "all" || logIn.Filter == "system") {
 		logStream, err := lc.client.WatchLogs(context.Background(), &logIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchLogs() (%s)\n", err.Error())
@@ -153,6 +155,8 @@ func (lc *LogClient) WatchMessages(msgPath string, jsonFormat bool) error {
 		}
 	}
 
+	fmt.Println("Stopped WatchMessages")
+
 	return nil
 }
 
@@ -164,7 +168,7 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 	for lc.Running {
 		res, err := lc.alertStream.Recv()
 		if err != nil {
-			fmt.Printf("Failed to receive a log (%s)\n", err.Error())
+			fmt.Printf("Failed to receive an alert (%s)\n", err.Error())
 			break
 		}
 
@@ -228,6 +232,8 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 		}
 	}
 
+	fmt.Println("Stopped WatchAlerts")
+
 	return nil
 }
 
@@ -282,6 +288,8 @@ func (lc *LogClient) WatchLogs(logPath string, jsonFormat bool) error {
 			ll.StrToFile(str, logPath)
 		}
 	}
+
+	fmt.Println("Stopped WatchLogs")
 
 	return nil
 }
