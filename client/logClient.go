@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2021 Authors of KubeArmor
+
 package client
 
 import (
@@ -5,21 +8,55 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
-
-	kl "github.com/kubearmor/kubearmor-log-client/common"
 
 	pb "github.com/kubearmor/KubeArmor/protobuf"
 	"google.golang.org/grpc"
 )
 
+// ============ //
+// == Common == //
+// ============ //
+
+// StrToFile Function
+func StrToFile(str, destFile string) {
+	if _, err := os.Stat(destFile); err != nil {
+		newFile, err := os.Create(filepath.Clean(destFile))
+		if err != nil {
+			fmt.Printf("Failed to create a file (%s, %s)\n", destFile, err.Error())
+			return
+		}
+		if err := newFile.Close(); err != nil {
+			fmt.Printf("Failed to close the file (%s, %s)\n", destFile, err.Error())
+		}
+	}
+
+	// #nosec
+	file, err := os.OpenFile(destFile, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Printf("Failed to open a file (%s, %s)\n", destFile, err.Error())
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("Failed to close the file (%s, %s)\n", destFile, err.Error())
+		}
+	}()
+
+	_, err = file.WriteString(str)
+	if err != nil {
+		fmt.Printf("Failed to write a string into the file (%s, %s)\n", destFile, err.Error())
+	}
+}
+
 // =============== //
 // == Log Feeds == //
 // =============== //
 
-// LogClient Structure
-type LogClient struct {
+// Feeder Structure
+type Feeder struct {
 	// flag
 	Running bool
 
@@ -46,71 +83,71 @@ type LogClient struct {
 }
 
 // NewClient Function
-func NewClient(server, msgPath, logPath, logFilter string) *LogClient {
-	lc := &LogClient{}
+func NewClient(server, msgPath, logPath, logFilter string) *Feeder {
+	fd := &Feeder{}
 
-	lc.Running = true
+	fd.Running = true
 
-	lc.server = server
+	fd.server = server
 
-	conn, err := grpc.Dial(lc.server, grpc.WithInsecure())
+	conn, err := grpc.Dial(fd.server, grpc.WithInsecure())
 	if err != nil {
 		// fmt.Printf("Failed to connect to a gRPC server (%s)\n", err.Error())
 		return nil
 	}
-	lc.conn = conn
+	fd.conn = conn
 
-	lc.client = pb.NewLogServiceClient(lc.conn)
+	fd.client = pb.NewLogServiceClient(fd.conn)
 
 	msgIn := pb.RequestMessage{}
 	msgIn.Filter = ""
 
 	if msgPath != "none" {
-		msgStream, err := lc.client.WatchMessages(context.Background(), &msgIn)
+		msgStream, err := fd.client.WatchMessages(context.Background(), &msgIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchMessages() (%s)\n", err.Error())
 			return nil
 		}
-		lc.msgStream = msgStream
+		fd.msgStream = msgStream
 	}
 
 	alertIn := pb.RequestMessage{}
 	alertIn.Filter = logFilter
 
 	if logPath != "none" && (alertIn.Filter == "all" || alertIn.Filter == "policy") {
-		alertStream, err := lc.client.WatchAlerts(context.Background(), &alertIn)
+		alertStream, err := fd.client.WatchAlerts(context.Background(), &alertIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchAlerts() (%s)\n", err.Error())
 			return nil
 		}
-		lc.alertStream = alertStream
+		fd.alertStream = alertStream
 	}
 
 	logIn := pb.RequestMessage{}
 	logIn.Filter = logFilter
 
 	if logPath != "none" && (logIn.Filter == "all" || logIn.Filter == "system") {
-		logStream, err := lc.client.WatchLogs(context.Background(), &logIn)
+		logStream, err := fd.client.WatchLogs(context.Background(), &logIn)
 		if err != nil {
 			// fmt.Printf("Failed to call WatchLogs() (%s)\n", err.Error())
 			return nil
 		}
-		lc.logStream = logStream
+		fd.logStream = logStream
 	}
 
-	lc.WgClient = sync.WaitGroup{}
+	fd.WgClient = sync.WaitGroup{}
 
-	return lc
+	return fd
 }
 
 // DoHealthCheck Function
-func (lc *LogClient) DoHealthCheck() bool {
-	// generate a nonce
+func (fd *Feeder) DoHealthCheck() bool {
+	// #nosec
 	randNum := rand.Int31()
 
 	// send a nonce
 	nonce := pb.NonceMessage{Nonce: randNum}
-	res, err := lc.client.HealthCheck(context.Background(), &nonce)
+	res, err := fd.client.HealthCheck(context.Background(), &nonce)
 	if err != nil {
 		fmt.Printf("Failed to call HealthCheck() (%s)\n", err.Error())
 		return false
@@ -125,12 +162,12 @@ func (lc *LogClient) DoHealthCheck() bool {
 }
 
 // WatchMessages Function
-func (lc *LogClient) WatchMessages(msgPath string, jsonFormat bool) error {
-	lc.WgClient.Add(1)
-	defer lc.WgClient.Done()
+func (fd *Feeder) WatchMessages(msgPath string, jsonFormat bool) error {
+	fd.WgClient.Add(1)
+	defer fd.WgClient.Done()
 
-	for lc.Running {
-		res, err := lc.msgStream.Recv()
+	for fd.Running {
+		res, err := fd.msgStream.Recv()
 		if err != nil {
 			fmt.Printf("Failed to receive a message (%s)\n", err.Error())
 			break
@@ -151,7 +188,7 @@ func (lc *LogClient) WatchMessages(msgPath string, jsonFormat bool) error {
 		if msgPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			kl.StrToFile(str, msgPath)
+			StrToFile(str, msgPath)
 		}
 	}
 
@@ -161,12 +198,12 @@ func (lc *LogClient) WatchMessages(msgPath string, jsonFormat bool) error {
 }
 
 // WatchAlerts Function
-func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
-	lc.WgClient.Add(1)
-	defer lc.WgClient.Done()
+func (fd *Feeder) WatchAlerts(logPath string, jsonFormat bool) error {
+	fd.WgClient.Add(1)
+	defer fd.WgClient.Done()
 
-	for lc.Running {
-		res, err := lc.alertStream.Recv()
+	for fd.Running {
+		res, err := fd.alertStream.Recv()
 		if err != nil {
 			fmt.Printf("Failed to receive an alert (%s)\n", err.Error())
 			break
@@ -228,7 +265,7 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 		if logPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			kl.StrToFile(str, logPath)
+			StrToFile(str, logPath)
 		}
 	}
 
@@ -238,12 +275,12 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 }
 
 // WatchLogs Function
-func (lc *LogClient) WatchLogs(logPath string, jsonFormat bool) error {
-	lc.WgClient.Add(1)
-	defer lc.WgClient.Done()
+func (fd *Feeder) WatchLogs(logPath string, jsonFormat bool) error {
+	fd.WgClient.Add(1)
+	defer fd.WgClient.Done()
 
-	for lc.Running {
-		res, err := lc.logStream.Recv()
+	for fd.Running {
+		res, err := fd.logStream.Recv()
 		if err != nil {
 			fmt.Printf("Failed to receive a log (%s)\n", err.Error())
 			break
@@ -285,7 +322,7 @@ func (lc *LogClient) WatchLogs(logPath string, jsonFormat bool) error {
 		if logPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			kl.StrToFile(str, logPath)
+			StrToFile(str, logPath)
 		}
 	}
 
@@ -295,12 +332,12 @@ func (lc *LogClient) WatchLogs(logPath string, jsonFormat bool) error {
 }
 
 // DestroyClient Function
-func (lc *LogClient) DestroyClient() error {
-	if err := lc.conn.Close(); err != nil {
+func (fd *Feeder) DestroyClient() error {
+	if err := fd.conn.Close(); err != nil {
 		return err
 	}
 
-	lc.WgClient.Wait()
+	fd.WgClient.Wait()
 
 	return nil
 }

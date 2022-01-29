@@ -5,10 +5,9 @@ go 1.15
 replace (
 	github.com/kubearmor/kubearmor-log-client => ./
 	github.com/kubearmor/kubearmor-log-client/client => ./client
-	github.com/kubearmor/kubearmor-log-client/common => ./common
 )
 
 require (
-	github.com/kubearmor/kubearmor-log-client/client v0.0.0-00010101000000-000000000000
-	github.com/kubearmor/kubearmor-log-client/common v0.0.0-00010101000000-000000000000 // indirect
+	github.com/kubearmor/KubeArmor/protobuf v0.0.0-20220128124414-a9d4b4910046
+	google.golang.org/grpc v1.44.0
 )
