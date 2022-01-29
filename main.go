@@ -49,7 +49,7 @@ func main() {
 	gRPCPtr := flag.String("gRPC", "", "gRPC server information")
 	msgPathPtr := flag.String("msgPath", "none", "Output location for messages, {path|stdout|none}")
 	logPathPtr := flag.String("logPath", "stdout", "Output location for alerts and logs, {path|stdout|none}")
-	logFilterPtr := flag.String("logFilter", "policy", "Filter for what kinds of alerts and logs to receive, {policy|system|all}")
+	logFilterPtr := flag.String("filter", "policy", "Filter for what kinds of alerts and logs to receive, {policy|system|all}")
 	jsonPtr := flag.Bool("json", false, "Flag to print alerts and logs in the JSON format")
 	flag.Parse()
 
