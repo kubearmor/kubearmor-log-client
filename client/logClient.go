@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	ll "github.com/kubearmor/kubearmor-log-client/common"
+	kl "github.com/kubearmor/kubearmor-log-client/common"
 
 	pb "github.com/kubearmor/KubeArmor/protobuf"
 	"google.golang.org/grpc"
@@ -151,7 +151,7 @@ func (lc *LogClient) WatchMessages(msgPath string, jsonFormat bool) error {
 		if msgPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			ll.StrToFile(str, msgPath)
+			kl.StrToFile(str, msgPath)
 		}
 	}
 
@@ -228,7 +228,7 @@ func (lc *LogClient) WatchAlerts(logPath string, jsonFormat bool) error {
 		if logPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			ll.StrToFile(str, logPath)
+			kl.StrToFile(str, logPath)
 		}
 	}
 
@@ -285,7 +285,7 @@ func (lc *LogClient) WatchLogs(logPath string, jsonFormat bool) error {
 		if logPath == "stdout" {
 			fmt.Printf("%s", str)
 		} else {
-			ll.StrToFile(str, logPath)
+			kl.StrToFile(str, logPath)
 		}
 	}
 
